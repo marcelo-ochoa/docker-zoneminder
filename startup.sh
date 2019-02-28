@@ -16,18 +16,9 @@ sed  -i "s|ZM_DB_HOST=localhost|ZM_DB_HOST=$ZM_DB_HOST|" /etc/zm/zm.conf
 #if ZM_SERVER_HOST variable is provided in container use it as is, if not left 02-multiserver.conf unchanged
 if [ -v ZM_SERVER_HOST ]; then sed -i "s|#ZM_SERVER_HOST=|ZM_SERVER_HOST=${ZM_SERVER_HOST}|" /etc/zm/conf.d/02-multiserver.conf; fi
 
-# Returns true once mysql can connect.
-mysql_ready() {
-  mysqladmin ping --host=$ZM_DB_HOST --user=root --password=mysqlpsswd > /dev/null 2>&1
-}
-
 if [ -f /var/cache/zoneminder/configured ]; then
         echo 'already configured.'
-        while !(mysql_ready)
-        do
-          sleep 3
-          echo "waiting for mysql ..."
-        done
+        /sbin/wait-for-it.sh -h $ZM_DB_HOST -p 3306 -t 300
         /sbin/zm.sh&
 else
         
@@ -38,11 +29,7 @@ else
           # IF ZM_DB_HOST is set to localhost, start MySQL local. If not MySQL is running in a separate container
           if [ "$ZM_DB_HOST" == "localhost" ]; then
             /usr/bin/mysqld_safe &
-            while !(mysql_ready)
-            do
-              sleep 3
-              echo "waiting for mysql ..."
-            done
+            /sbin/wait-for-it.sh -h $ZM_DB_HOST -p 3306 -t 300
             echo "grant select,insert,update,delete on zm.* to 'zmuser'@localhost identified by 'zmpass'; flush privileges; " | mysql -u root -pmysqlpsswd -h $ZM_DB_HOST
           fi
           echo "SET GLOBAL sql_mode = 'NO_ENGINE_SUBSTITUTION';" | mysql -u root -pmysqlpsswd -h $ZM_DB_HOST
@@ -50,11 +37,7 @@ else
           date > /var/cache/zoneminder/dbcreated
           if [ "$ZM_DB_HOST" == "localhost" ]; then
             killall mysqld
-            while !(mysql_ready)
-            do
-              sleep 3
-              echo "waiting for mysql ..."
-            done
+            /sbin/wait-for-it.sh -h $ZM_DB_HOST -p 3306 -t 300
           fi
         fi
         

@@ -41,6 +41,10 @@ RUN mkdir -p /var/log/zm ; sync
 COPY zm.sh /sbin/zm.sh
 RUN chmod +x /sbin/zm.sh
 
+# Wait for MySQL startup
+ADD https://raw.githubusercontent.com/vishnubob/wait-for-it/master/wait-for-it.sh /sbin/wait-for-it.sh
+RUN chmod +x /sbin/wait-for-it.sh
+
 ##startup scripts  
 #Pre-config scrip that maybe need to be run one time only when the container run the first time .. using a flag to don't 
 #run it again ... use for conf for service ... when run the first time ...
