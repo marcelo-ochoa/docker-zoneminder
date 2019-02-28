@@ -25,20 +25,6 @@ else
         #configuration for zoneminder
         #cp /etc/mysql/mysql.conf.d/mysqld.cnf /usr/my.cnf
         #this only happends if -V was used and data was not from another container for that reason need to recreate the db.
-        if [ ! -f /var/cache/zoneminder/dbcreated ]; then
-          # IF ZM_DB_HOST is set to localhost, start MySQL local. If not MySQL is running in a separate container
-          if [ "$ZM_DB_HOST" == "localhost" ]; then
-            /usr/bin/mysqld_safe &
-            /sbin/wait-for-it.sh -h $ZM_DB_HOST -p 3306 -t 300
-            echo "grant select,insert,update,delete on zm.* to 'zmuser'@localhost identified by 'zmpass'; flush privileges; " | mysql -u root -pmysqlpsswd -h $ZM_DB_HOST
-          fi
-          echo "SET GLOBAL sql_mode = 'NO_ENGINE_SUBSTITUTION';" | mysql -u root -pmysqlpsswd -h $ZM_DB_HOST
-          mysql -u root -pmysqlpsswd -h $ZM_DB_HOST < /usr/share/zoneminder/db/zm_create.sql
-          date > /var/cache/zoneminder/dbcreated
-          if [ "$ZM_DB_HOST" == "localhost" ]; then
-            killall mysqld
-            /sbin/wait-for-it.sh -h $ZM_DB_HOST -p 3306 -t 300
-          fi
         fi
         
         #check if Directory inside of /var/cache/zoneminder are present.
