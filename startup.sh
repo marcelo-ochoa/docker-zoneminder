@@ -16,6 +16,11 @@ sed  -i "s|ZM_DB_HOST=localhost|ZM_DB_HOST=$ZM_DB_HOST|" /etc/zm/zm.conf
 #if ZM_SERVER_HOST variable is provided in container use it as is, if not left 02-multiserver.conf unchanged
 if [ -v ZM_SERVER_HOST ]; then sed -i "s|#ZM_SERVER_HOST=|ZM_SERVER_HOST=${ZM_SERVER_HOST}|" /etc/zm/conf.d/02-multiserver.conf; fi
 
+# fix 404 on some css resources
+if [ ! -L /usr/share/zoneminder/www/skins/classic/css/fonts ]; then
+        ln -s /usr/share/zoneminder/www/fonts /usr/share/zoneminder/www/skins/classic/css/fonts
+fi
+
 if [ -f /var/cache/zoneminder/configured ]; then
         echo 'already configured.'
         /sbin/wait-for-it.sh -h $ZM_DB_HOST -p 3306 -t 300
@@ -25,7 +30,9 @@ else
         #configuration for zoneminder
         #cp /etc/mysql/mysql.conf.d/mysqld.cnf /usr/my.cnf
         #this only happends if -V was used and data was not from another container for that reason need to recreate the db.
-        fi
+        # Requires manual DB creation, on container zm_db run:
+        # mysql -uroot -p < /usr/share/zoneminder/db/zm_create.sql
+        # if it a separate container running MariaDB copy from ZoneMinder image zm_create.sql and triggers.sql
         
         #check if Directory inside of /var/cache/zoneminder are present.
         if [ ! -d /var/cache/zoneminder/events ]; then
