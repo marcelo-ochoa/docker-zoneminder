@@ -1,16 +1,16 @@
-# quantumobject/docker-zoneminder:1.31.44 build from https://github.com/marcelo-ochoa/docker-zoneminder
-# docker build -t "quantumobject/docker-zoneminder:1.31.44" -f Dockerfile .
+# quantumobject/docker-zoneminder:1.33.3 build from https://github.com/marcelo-ochoa/docker-zoneminder
+# docker build -t "quantumobject/docker-zoneminder:1.33.3" -f Dockerfile .
 # dockercloud/haproxy:1.6.7.1 build from https://github.com/marcelo-ochoa/dockercloud-haproxy
 version: '3.2'
 
 services:
   db:
-    image: mysql/mysql-server:5.7
+    image: mariadb:10.0
     networks:
       - net
     volumes:
       - /home/data/zm/mysql:/var/lib/mysql
-      - $PWD/conf/mysql:/etc/mysql:ro
+      - $PWD/conf/mysql/my.cnf:/etc/mysql/conf.d/zm.cnf:ro
     environment:
      - TZ=America/Argentina/Buenos_Aires
      - MYSQL_USER=zmuser
@@ -26,7 +26,7 @@ services:
        max_attempts: 3
        window: 120s
   web:
-    image: quantumobject/docker-zoneminder:1.31.44
+    image: quantumobject/docker-zoneminder:1.33.3
     networks:
       - net
     volumes:
@@ -51,7 +51,7 @@ services:
     depends_on:
       - db 
   stream:
-    image: quantumobject/docker-zoneminder:1.31.44
+    image: quantumobject/docker-zoneminder:1.33.3
     networks:
       - net
     volumes:
@@ -62,13 +62,13 @@ services:
         target: /dev/shm
     environment:
      - TZ=America/Argentina/Buenos_Aires
-     - VIRTUAL_HOST=stream{{.Task.Slot}}.localhost
+     - VIRTUAL_HOST=stream0.localhost
      - SERVICE_PORTS="80"
-     - ZM_SERVER_HOST=node.{{.Task.Slot}}
+ #    - ZM_SERVER_HOST=node.0
      - ZM_DB_HOST=db
     deploy:
       mode: replicated
-      replicas: 3
+      replicas: 0
       restart_policy:
         condition: on-failure
         max_attempts: 3
@@ -76,7 +76,7 @@ services:
     depends_on:
       - web
   lb:
-    image: dockercloud/haproxy:1.6.7.1
+    image: dockercloud/haproxy
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
     ports:
