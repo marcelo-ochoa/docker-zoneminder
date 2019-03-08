@@ -6,5 +6,7 @@ ZM_DB_HOST=${ZM_DB_HOST:-localhost}
 
 # IF ZM_DB_HOST is set to localhost, start MySQL local. If not MySQL is running in a separate container
 if [ "$ZM_DB_HOST" == "localhost" ]; then
+  mkdir -p /var/run/mysqld
+  chown mysql /var/run/mysqld
   exec chpst -u mysql /usr/bin/mysqld_safe  2>&1 
 fi
