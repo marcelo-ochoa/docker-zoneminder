@@ -1,15 +1,13 @@
-# quantumobject/docker-zoneminder:1.33.3 build from https://github.com/marcelo-ochoa/docker-zoneminder
-# docker build -t "quantumobject/docker-zoneminder:1.33.3" -f Dockerfile .
-# dockercloud/haproxy:1.6.7.1 build from https://github.com/marcelo-ochoa/dockercloud-haproxy
-version: '3.2'
+version: '3.3'
 
 services:
   db:
-    image: mariadb:10.0
+    image: mariadb:10.4.12
     networks:
       - net
     volumes:
       - /home/data/zm/mysql:/var/lib/mysql
+      # comment on first run to allow MySQL Empty DB Creation
       - $PWD/conf/mysql/my.cnf:/etc/mysql/conf.d/zm.cnf:ro
     environment:
      - TZ=America/Argentina/Buenos_Aires
@@ -26,7 +24,8 @@ services:
        max_attempts: 3
        window: 120s
   web:
-    image: quantumobject/docker-zoneminder:1.33.3
+    image: quantumobject/docker-zoneminder:1.34
+    command: bash -c "ln -s /usr/share/zoneminder/www/fonts /usr/share/zoneminder/www/skins/classic/css/fonts && /sbin/my_init"
     networks:
       - net
     volumes:
@@ -51,7 +50,7 @@ services:
     depends_on:
       - db 
   stream:
-    image: quantumobject/docker-zoneminder:1.33.3
+    image: quantumobject/docker-zoneminder:1.34
     networks:
       - net
     volumes:
@@ -64,11 +63,11 @@ services:
      - TZ=America/Argentina/Buenos_Aires
      - VIRTUAL_HOST=stream0.localhost
      - SERVICE_PORTS="80"
- #    - ZM_SERVER_HOST=node.0
+     - ZM_SERVER_HOST=node.1
      - ZM_DB_HOST=db
     deploy:
       mode: replicated
-      replicas: 0
+      replicas: 1
       restart_policy:
         condition: on-failure
         max_attempts: 3

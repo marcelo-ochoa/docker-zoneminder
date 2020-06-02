@@ -71,19 +71,17 @@ $ docker exec -it container_id /bin/bash
 This projects is implemented to be deployed as docker-compose or swarm stack. Here an example of the docker swarm stack
 
 ```yml
-version: '3.2'
+version: '3.3'
 
 services:
   db:
-    image: mysql/mysql-server:5.7
-    hostname: db
+    image: mariadb:10.4.12
     networks:
-      net:
-        aliases:
-          - db
+      - net
     volumes:
-      - $PWD/mysql:/var/lib/mysql
-      - $PWD/conf/mysql:/etc/mysql:ro
+      - /home/data/zm/mysql:/var/lib/mysql
+      # comment on first run to allow MySQL Empty DB Creation
+      - $PWD/conf/mysql/my.cnf:/etc/mysql/conf.d/zm.cnf:ro
     environment:
      - TZ=America/Argentina/Buenos_Aires
      - MYSQL_USER=zmuser
@@ -94,19 +92,18 @@ services:
     deploy:
       mode: replicated
       replicas: 1
-      endpoint_mode: dnsrr
       restart_policy:
        condition: on-failure
        max_attempts: 3
        window: 120s
   web:
-    image: quantumobject/docker-zoneminder:1.33.3
+    image: quantumobject/docker-zoneminder:1.34
     networks:
       - net
     volumes:
       - /var/empty
-      - $PWD/backups:/var/backups
-      - $PWD/zoneminder:/var/cache/zoneminder
+      - /home/data/zm/backups:/var/backups
+      - /home/data/zm/zoneminder:/var/cache/zoneminder
       - type: tmpfs
         target: /dev/shm
     environment:
@@ -117,32 +114,32 @@ services:
      - ZM_DB_HOST=db
     deploy:
       mode: replicated
-      replicas: 0
+      replicas: 1
       restart_policy:
         condition: on-failure
         max_attempts: 3
         window: 120s
     depends_on:
-      - db
+      - db 
   stream:
-    image: quantumobject/docker-zoneminder:1.33.3
+    image: quantumobject/docker-zoneminder:1.34
     networks:
       - net
     volumes:
       - /var/empty
-      - $PWD/backups:/var/backups
-      - $PWD/zoneminder:/var/cache/zoneminder
+      - /home/data/zm/backups:/var/backups
+      - /home/data/zm/zoneminder:/var/cache/zoneminder
       - type: tmpfs
         target: /dev/shm
     environment:
      - TZ=America/Argentina/Buenos_Aires
-     - VIRTUAL_HOST=stream{{.Task.Slot}}.localhost
+     - VIRTUAL_HOST=stream0.localhost
      - SERVICE_PORTS="80"
-     - ZM_SERVER_HOST=node.{{.Task.Slot}}
+     - ZM_SERVER_HOST=node.1
      - ZM_DB_HOST=db
     deploy:
       mode: replicated
-      replicas: 0
+      replicas: 1
       restart_policy:
         condition: on-failure
         max_attempts: 3
@@ -150,7 +147,7 @@ services:
     depends_on:
       - web
   lb:
-    image: dockercloud/haproxy:1.6.7.1
+    image: dockercloud/haproxy
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
     ports:
@@ -171,7 +168,7 @@ services:
         max_attempts: 3
         window: 120s
     depends_on:
-      - node0
+      - web
 networks:
   net:
     driver: overlay
@@ -180,19 +177,17 @@ networks:
 above docker-compose.yml stack example asume a directory structure at $PWD as is
 
 ```bash
-$PWD/mysql      # (MySQL Data, drwxr-xr-x 6   27 27)
+$PWD/mysql      # (MySQL Data, drwxr-xr-x 6   999 999)
 $PWD/zoneminder # (directory for images, drwxrwx--- 5 root 33)
 $PWD/backup     # (directory for backups, drwxr-xr-x 2 root root)
 $PWD/conf       # (configuration files, drwxrwxr-x  7 1000 1000, only conf/mysql/my.cnf is required)
 cat conf/mysql/my.cnf
-# For advice on how to change settings please see
-# http://dev.mysql.com/doc/refman/5.7/en/server-configuration-defaults.html
-
 [mysqld]
 
 sql_mode = NO_ENGINE_SUBSTITUTION
 max_connections = 500
 skip-grant-tables
+
 
 ```
 
